@@ -174,7 +174,8 @@ namespace big
 		auto& io = ImGui::GetIO();
 		switch (m_require_extra)
 		{
-		case eAlphabetType::CHINESE: return GetGlyphRangesChineseSimplifiedOfficial();
+		//case eAlphabetType::CHINESE: return GetGlyphRangesChineseSimplifiedOfficial();
+		case eAlphabetType::CHINESE: return GetGlyphRangesChineseFull();
 		case eAlphabetType::CYRILLIC: return io.Fonts->GetGlyphRangesCyrillic();
 		case eAlphabetType::JAPANESE: return io.Fonts->GetGlyphRangesJapanese();
 		case eAlphabetType::KOREAN: return io.Fonts->GetGlyphRangesKorean();
