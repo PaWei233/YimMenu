@@ -23,6 +23,9 @@ include(cmake/imgui.cmake)
 message("\nFetching custom modules")
 include(cmake/gtav-classes.cmake)
 
+# Proxy
+set(ENV{http_proxy} "http://127.0.0.1:10809")
+set(ENV{https_proxy} "http://127.0.0.1:10809")
 
 # YimMenu
 message(STATUS "YimMenu")
