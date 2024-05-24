@@ -1,13 +1,14 @@
-#include "core/data/apartment_names.hpp"
+﻿#include "core/data/apartment_names.hpp"
 #include "core/data/command_access_levels.hpp"
 #include "core/data/region_codes.hpp"
 #include "core/data/warehouse_names.hpp"
 #include "fiber_pool.hpp"
 #include "gta_util.hpp"
 #include "hooking/hooking.hpp"
-#include "util/notify.hpp"
+#include "util/chat.hpp"
 #include "util/scripts.hpp"
 #include "util/session.hpp"
+#include "util/troll.hpp"
 #include "util/toxic.hpp"
 #include "views/view.hpp"
 #include "backend/bool_command.hpp"
@@ -22,6 +23,12 @@ namespace big
 	struct SessionType
 	{
 		eSessionType id;
+		const char* name;
+	};
+
+	struct target_language_type
+	{
+		const char* type;
 		const char* name;
 	};
 
@@ -57,7 +64,7 @@ namespace big
 				if (g_pointers->m_gta.m_decode_session_info(&info, base64, nullptr))
 					session::join_session(info);
 				else
-					g_notification_service->push_error("RID_JOINER"_T.data(), "VIEW_NET_RIDJOINER_SESSION_INFO_INVALID"_T.data());
+					g_notification_service.push_error("RID_JOINER"_T.data(), "VIEW_NET_RIDJOINER_SESSION_INFO_INVALID"_T.data());
 			});
 
 			components::button("COPY_SESSION_INFO"_T, [] {
@@ -74,22 +81,43 @@ namespace big
 
 	void render_session_switcher()
 	{
+		if (g_pointers->m_gta.m_region_code == nullptr)
+			return;
+
+		static int selected_region_index = -1;
+		static bool region_updated       = false;
+
+		std::string region_str =
+		    (selected_region_index == -1) ? "SESSION_SELECT_COMBO"_T.data() : regions[*g_pointers->m_gta.m_region_code].name;
+
 		ImGui::BeginGroup();
-		components::sub_title("SESSION_SWITCHER"_T);
+		components::sub_title("SESSION_SELECT"_T);
 		if (ImGui::BeginListBox("###session_switch", get_listbox_dimensions()))
 		{
-			if (ImGui::BeginCombo("##regionswitcher", "REGIONS"_T.data()))
+			if (ImGui::BeginCombo("##regionswitcher", region_str.c_str()))
 			{
 				for (const auto& region_type : regions)
 				{
 					components::selectable(region_type.name, *g_pointers->m_gta.m_region_code == region_type.id, [&region_type] {
 						*g_pointers->m_gta.m_region_code = region_type.id;
+						region_updated                   = true;
 					});
 				}
 				ImGui::EndCombo();
 			}
 
-			ImGui::Spacing();
+			if (region_updated)
+			{
+				selected_region_index = *g_pointers->m_gta.m_region_code;
+				region_updated        = false;
+			}
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("SESSION_SELECT_COMBO_DESC"_T.data());
+			}
+
+			ImGui::Separator();
 
 			static const auto sessions = std::to_array<SessionType>({ //This has to be here because if it's generated at compile time, the translations break for some reason.
 				{eSessionType::JOIN_PUBLIC, "BACKEND_SESSION_TYPE_JOIN_PUBLIC"},
@@ -107,9 +135,14 @@ namespace big
 
 			for (const auto& [id, name] : sessions)
 			{
+				if (id == eSessionType::LEAVE_ONLINE && gta_util::get_network_player_mgr()->m_player_count == 0) // Don't show a Leave Online option in single player (it actually sends us INTO online)
+					continue;
+
+				ImGui::BeginDisabled(selected_region_index == -1 && id != eSessionType::LEAVE_ONLINE); // Leave Online is always enabled in online sessions since we don't care about the selected region
 				components::selectable(g_translation_service.get_translation(name), false, [&id] {
 					session::join_type(id);
 				});
+				ImGui::EndDisabled();
 			}
 			ImGui::EndListBox();
 		}
@@ -119,6 +152,7 @@ namespace big
 
 	bool_command whitelist_friends("trustfriends", "TRUST_FRIENDS", "TRUST_FRIENDS_DESC", g.session.trust_friends);
 	bool_command whitelist_session("trustsession", "TRUST_SESSION", "TRUST_SESSION_DESC", g.session.trust_session);
+	bool_command chat_translate("translatechat", "TRANSLATOR_TOGGLE", "TRANSLATOR_TOGGLE_DESC", g.session.chat_translator.enabled);
 
 	void render_misc()
 	{
@@ -198,11 +232,7 @@ namespace big
 			components::button("SEND"_T, [] {
 				if (const auto net_game_player = gta_util::get_network_player_mgr()->m_local_net_player; net_game_player)
 				{
-					if (g_hooking->get_original<hooks::send_chat_message>()(*g_pointers->m_gta.m_send_chat_ptr,
-					        net_game_player->get_net_data(),
-					        msg,
-					        g.session.is_team))
-						notify::draw_chat(msg, net_game_player->get_name(), g.session.is_team);
+					chat::send_message(msg, nullptr, true, g.session.is_team);
 				}
 			});
 
@@ -231,6 +261,34 @@ namespace big
 				}
 			}
 
+			components::command_checkbox<"translatechat">();
+			if (g.session.chat_translator.enabled)
+			{
+
+				ImGui::Checkbox("TRANSLATOR_HIDE_SAME_LANGUAGE"_T.data(), &g.session.chat_translator.bypass_same_language);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("TRANSLATOR_HIDE_SAME_LANGUAGE_DESC"_T.data());
+
+				components::small_text("TRANSLATOR_OUTPUT"_T.data());
+				ImGui::Checkbox("TRANSLATOR_SHOW_ON_CHAT"_T.data(), &g.session.chat_translator.draw_result);
+				ImGui::Checkbox("TRANSLATOR_PRINT_TO_CONSOLE"_T.data(), &g.session.chat_translator.print_result);
+
+				static const auto target_language = std::to_array<target_language_type>({{"sq", "Albanian"}, {"ar", "Arabic"}, {"az", "Azerbaijani"}, {"bn", "Bengali"}, {"bg", "Bulgarian"}, {"ca", "Catalan"}, {"zh", "Chinese"}, {"zt", "Chinese(traditional)"}, {"cs", "Czech"}, {"da", "Danish"}, {"nl", "Dutch"}, {"en", "English"}, {"eo", "Esperanto"}, {"et", "Estonian"}, {"fi", "Finnish"}, {"fr", "French"}, {"de", "German"}, {"el", "Greek"}, {"he", "Hebrew"}, {"hi", "Hindi"}, {"hu", "Hungarian"}, {"id", "Indonesian"}, {"ga", "Irish"}, {"it", "Italian"}, {"ja", "Japanese"}, {"ko", "Korean"}, {"lv", "Latvian"}, {"lt", "Lithuanian"}, {"ms", "Malay"}, {"nb", "Norwegian"}, {"fa", "Persian"}, {"pl", "Polish"}, {"pt", "Portuguese"}, {"ro", "Romanian"}, {"ru", "Russian"}, {"sr", "Serbian"}, {"sk", "Slovak"}, {"sl", "Slovenian"}, {"es", "Spanish"}, {"sv", "Swedish"}, {"tl", "Tagalog"}, {"th", "Thai"}, {"tr", "Turkish"}, {"uk", "Ukrainian"}, {"ur", "Urdu"}, {"vi", "Vietnamese"}});
+
+				components::input_text_with_hint("TRANSLATOR_ENDPOINT"_T.data(), "http://localhost:5000/translate", g.session.chat_translator.endpoint);
+
+				if (ImGui::BeginCombo("TRANSLATOR_TARGET_LANGUAGE"_T.data(), g.session.chat_translator.target_language.c_str()))
+				{
+					for (const auto& [type, name] : target_language)
+					{
+						components::selectable(name, false, [&type] {
+							g.session.chat_translator.target_language = type;
+						});
+					}
+					ImGui::EndCombo();
+				}
+			}	
+
 			ImGui::EndListBox();
 		}
 
@@ -250,6 +308,8 @@ namespace big
 			ImGui::Checkbox("NEVER_WANTED"_T.data(), &g.session.never_wanted_all);
 			ImGui::Checkbox("SEMI_GODMODE"_T.data(), &g.session.semi_godmode_all);
 			ImGui::Checkbox("VIEW_NET_SESSION_FIX_VEHICLE"_T.data(), &g.session.vehicle_fix_all);
+			components::command_checkbox<"harass">();
+			ImGui::Checkbox("SPAM_KILLFEED"_T.data(), &g.session.spam_killfeed);
 			ImGui::Checkbox("EXPLOSION_KARMA"_T.data(), &g.session.explosion_karma);
 			ImGui::Checkbox("DAMAGE_KARMA"_T.data(), &g.session.damage_karma);
 			ImGui::Checkbox("DISABLE_PEDS"_T.data(), &g.session.disable_peds);
@@ -400,7 +460,16 @@ namespace big
 				    g_player_service->iterate([](auto& plyr) {
 					    toxic::start_activity(plyr.second, eActivityType::GunrunningDefend);
 				    });
-			    });
+				});
+				ImGui::SeparatorText("Bounty");
+				static int value = 10000;
+				ImGui::SliderInt("##bountyvalue", &value, 0, 10000);
+				components::command_checkbox<"anonbounty">();
+				components::button("Bounty All", [] {
+					g_player_service->iterate([](auto& plyr) {
+						troll::set_bounty_on_player(plyr.second, value, g.session.anonymous_bounty);
+					});
+				});
 		    },
 		    false,
 		    "GRIEFING"_T.data());

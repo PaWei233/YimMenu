@@ -26,7 +26,10 @@ namespace big::entity
 	void delete_entity(Entity& ent, bool force)
 	{
 		if (!ENTITY::DOES_ENTITY_EXIST(ent))
+		{
+			ent = NULL;
 			return;
+		}
 		if (!force && !take_control_of(ent))
 		{
 			LOG(VERBOSE) << "Failed to take control of entity before deleting";
@@ -166,7 +169,7 @@ namespace big::entity
 		{
 			for (auto vehicle : pools::get_all_vehicles())
 			{
-				if (!include_self_veh && vehicle == gta_util::get_local_vehicle())
+				if (!vehicle || (!include_self_veh && vehicle == gta_util::get_local_vehicle()))
 					continue;
 
 				target_entities.push_back(g_pointers->m_gta.m_ptr_to_handle(vehicle));
@@ -177,7 +180,7 @@ namespace big::entity
 		{
 			for (auto ped : pools::get_all_peds())
 			{
-				if (ped == g_local_player)
+				if (!ped || ped == g_local_player)
 					continue;
 
 				target_entities.push_back(g_pointers->m_gta.m_ptr_to_handle(ped));
@@ -188,6 +191,9 @@ namespace big::entity
 		{
 			for (auto prop : pools::get_all_props())
 			{
+				if (!prop)
+					continue;
+
 				target_entities.push_back(g_pointers->m_gta.m_ptr_to_handle(prop));
 			}
 		}

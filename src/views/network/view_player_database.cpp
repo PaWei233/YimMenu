@@ -231,10 +231,10 @@ namespace big
 					g_thread_pool->push([selected] {
 						if (g_api_service->send_socialclub_message(selected->rockstar_id, message))
 						{
-							g_notification_service->push_success("SCAPI"_T.data(), "MSG_SENT_SUCCESS"_T.data());
+							g_notification_service.push_success("SCAPI"_T.data(), "MSG_SENT_SUCCESS"_T.data());
 							return;
 						}
-						g_notification_service->push_error("SCAPI"_T.data(), "MSG_SENT_FAIL"_T.data());
+						g_notification_service.push_error("SCAPI"_T.data(), "MSG_SENT_FAIL"_T.data());
 					});
 				};
 
@@ -281,6 +281,33 @@ namespace big
 			ImGui::EndChild();
 		}
 
+		if (ImGui::Button("REMOVE_UNTRUSTED"_T.data()))
+		{
+			ImGui::OpenPopup("##removeuntrusted");
+		}
+
+		if (ImGui::BeginPopupModal("##removeuntrusted"))
+		{
+			ImGui::Text("VIEW_NET_PLAYER_DB_ARE_YOU_SURE"_T.data());
+
+			if (ImGui::Button("YES"_T.data()))
+			{
+				g_player_database_service->set_selected(nullptr);
+				g_player_database_service->remove_untrusted_players();
+				g_player_database_service->save();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("NO"_T.data()))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		ImGui::SameLine();
+
 		if (ImGui::Button("REMOVE_ALL"_T.data()))
 		{
 			ImGui::OpenPopup("##removeall");
@@ -306,8 +333,6 @@ namespace big
 
 			ImGui::EndPopup();
 		}
-
-		ImGui::SameLine();
 
 		components::button("RELOAD_PLYR_ONLINE_STATES"_T, [] {
 			g_player_database_service->update_player_states();
@@ -351,7 +376,7 @@ namespace big
 			g_thread_pool->push([] {
 				if (!g_api_service->get_rid_from_username(new_name, *(uint64_t*)&new_rockstar_id))
 				{
-					g_notification_service->push_error("GUI_TAB_PLAYER_DATABASE"_T.data(), std::vformat("VIEW_NET_PLAYER_DB_NO_USER_CAN_BE_FOUND"_T, std::make_format_args(new_name)));
+					g_notification_service.push_error("GUI_TAB_PLAYER_DATABASE"_T.data(), std::vformat("VIEW_NET_PLAYER_DB_NO_USER_CAN_BE_FOUND"_T, std::make_format_args(new_name)));
 					new_rockstar_id = 0;
 				}
 			});

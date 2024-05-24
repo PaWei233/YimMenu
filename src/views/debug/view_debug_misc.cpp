@@ -60,6 +60,10 @@ namespace big
 				DLC::ON_ENTER_SP();
 			});
 
+			components::button("START_LS_CUSTOMS"_T, [] {
+				g.vehicle.ls_customs = true;
+			});
+
 			components::button("SKIP_CUTSCENE"_T, [] {
 				CUTSCENE::STOP_CUTSCENE_IMMEDIATELY();
 			});
@@ -79,6 +83,13 @@ namespace big
 
 			components::button("REMOVE_BLACKSCREEN"_T, [] {
 				CAM::DO_SCREEN_FADE_IN(0);
+				PLAYER::SET_PLAYER_CONTROL(self::id, true, 0);
+				ENTITY::FREEZE_ENTITY_POSITION(self::ped, false);
+				MISC::FORCE_GAME_STATE_PLAYING();
+				if (self::veh == 0)
+					TASK::CLEAR_PED_TASKS_IMMEDIATELY(self::ped);
+				HUD::DISPLAY_RADAR(true);
+				HUD::DISPLAY_HUD(true);
 			});
 
 			components::button("TP_TO_SAFE_POS"_T, [] {
@@ -87,7 +98,7 @@ namespace big
 				if (pathfind::find_closest_vehicle_node(self::pos, safepos, heading, 0))
 					ENTITY::SET_ENTITY_COORDS(self::ped, safepos.x, safepos.y, safepos.z, 0, 0, 0, false);
 				else
-					g_notification_service->push_error("DEBUG_TAB_MISC"_T.data(), "VIEW_DEBUG_MISC_TP_TO_SAFE_POS_FAILED"_T.data());
+					g_notification_service.push_error("DEBUG_TAB_MISC"_T.data(), "VIEW_DEBUG_MISC_TP_TO_SAFE_POS_FAILED"_T.data());
 			});
 
 			ImGui::Checkbox("VIEW_DEBUG_MISC_IMGUI_DEMO"_T.data(), &g.window.demo);

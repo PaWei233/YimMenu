@@ -17,6 +17,9 @@ class CBlipList;
 class TimecycleKeyframeData;
 class CTrainConfig;
 class CWeaponInfoManager;
+class CGameScriptHandlerMgr;
+class CPedFactory;
+class GtaThread;
 
 namespace rage
 {
@@ -30,6 +33,7 @@ namespace rage
 	class netTime;
 	class rlGamerInfo;
 	struct game_skeleton;
+	class scrProgramTable;
 }
 
 template<typename T>
@@ -83,7 +87,6 @@ namespace big
 		functions::handle_to_ptr m_handle_to_ptr;
 		rage::scrNativeRegistrationTable* m_native_registration_table;
 		functions::get_native_handler m_get_native_handler;
-		functions::fix_vectors m_fix_vectors;
 
 		rage::atArray<GtaThread*>* m_script_threads;
 		rage::scrProgramTable* m_script_program_table;
@@ -104,9 +107,8 @@ namespace big
 		functions::set_gravity_level m_set_gravity_level;
 
 		PVOID m_native_return;
+		PVOID m_ctext_file_ptr;
 		PVOID m_get_label_text;
-		functions::check_chat_profanity* m_check_chat_profanity;
-		functions::write_player_game_state_data_node m_write_player_game_state_data_node;
 
 		ChatData** m_chat_data;
 		ScInfo* m_sc_info;
@@ -124,8 +126,6 @@ namespace big
 		PVOID m_network_player_mgr_shutdown;
 
 		functions::get_gameplay_cam_coords m_get_gameplay_cam_coords;
-
-		PVOID m_write_player_gamer_data_node;
 
 		functions::trigger_script_event m_trigger_script_event;
 
@@ -184,7 +184,6 @@ namespace big
 		functions::fipackfile_unmount m_fipackfile_unmount;
 		functions::fipackfile_close_archive m_fipackfile_close_archive;
 
-		PVOID m_invalid_mods_crash_detour;
 		PVOID m_invalid_decal_crash;
 		PVOID m_task_parachute_object;
 		PVOID m_task_ambient_clips;
@@ -209,9 +208,9 @@ namespace big
 		PVOID m_sort_session_details;
 
 		PVOID m_process_matchmaking_find_response;
-		PVOID m_serialize_player_data_msg;
 
 		PVOID m_serialize_join_request_message;
+		PVOID m_serialize_join_request_message_2;
 
 		functions::give_pickup_rewards m_give_pickup_rewards;
 		functions::send_network_damage m_send_network_damage;
@@ -225,7 +224,6 @@ namespace big
 
 		PVOID m_broadcast_net_array;
 
-		rage::atSingleton<rage::RageSecurity>* m_security;
 		PVOID m_prepare_metric_for_sending;
 
 		PVOID m_queue_dependency;
@@ -261,15 +259,10 @@ namespace big
 
 		PVOID m_receive_pickup;
 
-		PVOID m_write_player_camera_data_node;
-
 		PVOID m_send_player_card_stats;
 		bool* m_force_player_card_refresh;
 
 		PVOID m_serialize_stats;
-
-		PVOID m_write_player_creation_data_node;
-		PVOID m_write_player_appearance_data_node;
 
 		PVOID m_enumerate_audio_devices;
 		PVOID m_direct_sound_capture_create;
@@ -303,6 +296,7 @@ namespace big
 		functions::get_host_array_handler_by_index m_get_host_array_handler_by_index;
 
 		PVOID m_error_message_box;
+		PVOID m_error_message_box_2;
 
 		functions::get_title_caption_error_message_box m_get_title_caption_error_message_box;
 
@@ -365,6 +359,20 @@ namespace big
 		functions::received_clone_remove m_received_clone_remove;
 
 		CWeaponInfoManager* m_weapon_info_manager;
+
+		functions::can_create_vehicle m_can_create_vehicle;
+
+		PVOID m_format_int;
+    
+		PVOID m_searchlight_crash;
+		functions::get_searchlight m_get_searchlight;
+
+		GenericPool** m_vehicle_allocator; // this is not a normal pool
+
+		PVOID m_write_node_data;
+		PVOID m_can_send_node_to_player;
+		PVOID m_write_node;
+		functions::get_sector_data m_get_sector_data;
 	};
 #pragma pack(pop)
 	static_assert(sizeof(gta_pointers) % 8 == 0, "Pointers are not properly aligned");

@@ -6,7 +6,7 @@
 #include "pointers.hpp"
 #include "script.hpp"
 #include "services/player_database/player_database_service.hpp"
-#include "util/notify.hpp"
+#include "util/chat.hpp"
 
 namespace big
 {
@@ -33,7 +33,7 @@ namespace big
 		if (kick)
 		{
 			g_fiber_pool->queue_job([player] {
-				dynamic_cast<player_command*>(command::get("multikick"_J))->call(player, {});
+				dynamic_cast<player_command*>(command::get("smartkick"_J))->call(player, {});
 			});
 		}
 
@@ -56,29 +56,46 @@ namespace big
 
 		if (log)
 		{
-			uint64_t rockstar_id = player->get_net_data() == nullptr ? 0 : player->get_net_data()->m_gamer_handle.m_rockstar_id;
-			LOGF(WARNING, "Received {} from {} ({})", m_event_name, player->get_name(), rockstar_id);
+			LOGF(WARNING, "Received {} from {} ({})", m_event_name, player->get_name(), player->get_rockstar_id());
 		}
 
 		if (announce_in_chat)
 		{
-			g_fiber_pool->queue_job([player, this] {
-				auto chat = std::format("{} {}", g.session.chat_output_prefix, std::vformat(g_translation_service.get_translation(m_announce_message), std::make_format_args(player->get_name())));
+			auto msg = std::format("{} {}",
+			    g.session.chat_output_prefix,
+			    std::vformat(g_translation_service.get_translation(m_announce_message), std::make_format_args(player->get_name())));
 
-				if (g_hooking->get_original<hooks::send_chat_message>()(*g_pointers->m_gta.m_send_chat_ptr,
-				        g_player_service->get_self()->get_net_data(),
-				        chat.data(),
-				        is_team_only))
-					notify::draw_chat(chat.c_str(), g_player_service->get_self()->get_name(), is_team_only);
-			});
+			chat::send_message(msg);
 		}
 
 		if (notify)
 		{
-			g_notification_service->push_warning("PROTECTIONS"_T.data(),
+			g_notification_service.push_warning("PROTECTIONS"_T.data(),
 			    std::vformat(g_translation_service.get_translation(m_notify_message), std::make_format_args(player->get_name())));
 		}
 
 		process_common(player);
+	}
+
+	// This function provides the same notification capabilities as process, but without further kick/timeout actions
+	// Probably no point announcing to chat, either
+	void reaction::only_notify(player_ptr player)
+	{
+		if (!player->is_valid())
+			return;
+		if ((player->is_friend() && g.session.trust_friends) || player->is_trusted || g.session.trust_session)
+			return;
+
+		if (log)
+		{
+			LOGF(WARNING, "Received {} from {} ({})", m_event_name, player->get_name(), player->get_rockstar_id());
+		}
+
+		if (notify)
+		{
+			// Use a different notification since the default start_script reaction is "Blocked Start Script"
+			g_notification_service.push_warning("PROTECTIONS"_T.data(),
+			    std::vformat("REACTION_START_SCRIPT_ALLOWED"_T.data(), std::make_format_args(player->get_name())));
+		}
 	}
 }

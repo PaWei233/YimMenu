@@ -61,7 +61,6 @@ namespace big::functions
 {
 	using run_script_threads = bool (*)(uint32_t ops_to_execute);
 	using get_native_handler = rage::scrNativeHandler (*)(rage::scrNativeRegistrationTable* registration_table, rage::scrNativeHash hash);
-	using fix_vectors = void (*)(rage::scrNativeCallContext* call_ctx);
 
 	using get_net_game_player = CNetGamePlayer* (*)(Player player);
 
@@ -75,7 +74,6 @@ namespace big::functions
 
 	using set_gravity_level = void (*)(int level);
 
-	using check_chat_profanity              = int(__int64 chat_type, const char* input, const char** output);
 	using write_player_game_state_data_node = bool (*)(rage::netObject* plr, CPlayerGameStateDataNode* node);
 
 	using get_gameplay_cam_coords = Vector3 (*)();
@@ -210,4 +208,10 @@ namespace big::functions
 	using get_ped_seat = CGetPedSeatReturnClass*(*)(PVOID seat_info, CPed* ped);
 	
 	using received_clone_remove = void (*)(CNetworkObjectMgr*, CNetGamePlayer*, CNetGamePlayer*, int16_t, uint32_t);
+
+	using can_create_vehicle = bool (*)();
+
+	using get_searchlight = void* (*) (CPed*);
+
+	using get_sector_data = void (*) (rage::fvector3* coords, std::uint16_t* x, std::uint16_t* y, std::uint16_t* z, rage::fvector3* sector_pos);
 }

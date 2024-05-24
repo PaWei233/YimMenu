@@ -32,17 +32,17 @@ namespace big
 				return;
 			}
 
-			const auto spawn_location =
-			    vehicle::get_spawn_location(ctx->get_sender()->id() == self::id ? g.spawn_vehicle.spawn_inside : false,
-			        hash,
-			        PLAYER::GET_PLAYER_PED_SCRIPT_INDEX(ctx->get_sender()->id()));
-			const auto spawn_heading = ENTITY::GET_ENTITY_HEADING(PLAYER::GET_PLAYER_PED_SCRIPT_INDEX(ctx->get_sender()->id()));
+			auto id = ctx->get_sender()->id();
+
+			const auto spawn_location = vehicle::get_spawn_location(id == self::id ? g.spawn_vehicle.spawn_inside : false,
+			        hash, PLAYER::GET_PLAYER_PED_SCRIPT_INDEX(id));
+			const auto spawn_heading = ENTITY::GET_ENTITY_HEADING(PLAYER::GET_PLAYER_PED_SCRIPT_INDEX(id));
 
 			auto veh = vehicle::spawn(hash, spawn_location, spawn_heading);
 
 			if (veh == 0)
 			{
-				g_notification_service->push_error("GUI_TAB_SPAWN_VEHICLE"_T.data(), "UNABLE_TO_SPAWN_VEHICLE"_T.data());
+				g_notification_service.push_error("GUI_TAB_SPAWN_VEHICLE"_T.data(), "UNABLE_TO_SPAWN_VEHICLE"_T.data());
 			}
 			else
 			{

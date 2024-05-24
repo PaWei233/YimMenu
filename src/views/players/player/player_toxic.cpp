@@ -97,8 +97,6 @@ namespace big
 			ImGui::Checkbox("KILL_LOOP"_T.data(), &g_player_service->get_selected()->kill_loop);
 			ImGui::SameLine();
 			ImGui::Checkbox("EXPLOSION_LOOP"_T.data(), &g_player_service->get_selected()->explosion_loop);
-			ImGui::SameLine();
-			ImGui::Checkbox("FREEZE_LOOP"_T.data(), &g_player_service->get_selected()->freeze_loop);
 
 			ImGui::Checkbox("RAGDOLL_LOOP"_T.data(), &g_player_service->get_selected()->ragdoll_loop);
 			ImGui::SameLine();
@@ -106,17 +104,19 @@ namespace big
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("PLAYER_TOXIC_BRING_PLAYER_OUT_GOD"_T.data());
 
+			ImGui::Checkbox("SPAM_KILLFEED"_T.data(), &g_player_service->get_selected()->spam_killfeed);
+
 			static int bounty_value = 0;
 			ImGui::SetNextItemWidth(300);
 			ImGui::SliderInt("BOUNTY"_T.data(), &bounty_value, 0, 10000);
 
 			components::command_checkbox<"anonbounty">();
 			ImGui::SameLine();
-
+			ImGui::PushID("setbounty");
 			components::button("SET"_T, [] {
 				troll::set_bounty_on_player(g_player_service->get_selected(), bounty_value, g.session.anonymous_bounty);
 			});
-
+			ImGui::PopID();
 			ImGui::EndListBox();
 		}
 		ImGui::EndGroup();
